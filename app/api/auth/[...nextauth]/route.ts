@@ -4,9 +4,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import clientPromise from "@/lib/mongodb";
 import bcrypt from "bcryptjs";
+import User from "@/lib/models/User";
 
-const handler = NextAuth({
-  adapter: MongoDBAdapter(clientPromise),
+export const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -24,23 +24,30 @@ const handler = NextAuth({
         }
 
         try {
-          const response = await fetch(`${process.env.NEXTAUTH_URL}/api/auth/login`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-          });
-
-          const user = await response.json();
-
-          if (response.ok && user) {
-            return user;
+          const user = await User.findOne({ email: credentials.email });
+          if (!user) {
+            return null;
           }
-          return null;
+
+          const isValidPassword = await bcrypt.compare(credentials.password, user.password);
+          if (!isValidPassword) {
+            return null;
+          }
+
+          // Return user without password, ensuring all required fields are present
+          const { password: _, ...userWithoutPassword } = user.toObject();
+          
+          // Ensure the user object has all required fields with defaults
+          return {
+            id: userWithoutPassword._id.toString(),
+            email: userWithoutPassword.email,
+            firstName: userWithoutPassword.firstName,
+            lastName: userWithoutPassword.lastName,
+            phone: userWithoutPassword.phone,
+            onboarding: userWithoutPassword.onboarding || false,
+            domain: userWithoutPassword.domain || null,
+            onboardingData: userWithoutPassword.onboardingData || null
+          };
         } catch (error) {
           console.error("Auth error:", error);
           return null;
@@ -49,33 +56,50 @@ const handler = NextAuth({
     }),
   ],
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: any) {
+      console.log("JWT callback triggered:", { hasUser: !!user, hasToken: !!token, tokenKeys: token ? Object.keys(token) : [] });
       if (user) {
+        console.log("JWT callback - user object:", user);
         token.id = user.id;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
         token.phone = user.phone;
+        token.onboarding = user.onboarding || false;
+        token.domain = user.domain || null;
+        token.onboardingData = user.onboardingData || null;
+        console.log("JWT callback - token updated:", token);
+      } else {
+        console.log("JWT callback - no user, token:", token);
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: any) {
+      console.log("Session callback triggered:", { hasSession: !!session, hasToken: !!token, sessionKeys: session ? Object.keys(session) : [] });
       if (token) {
+        console.log("Session callback - token object:", token);
         session.user.id = token.id as string;
         session.user.firstName = token.firstName as string;
         session.user.lastName = token.lastName as string;
         session.user.phone = token.phone as string;
+        session.user.onboarding = token.onboarding as boolean || false;
+        session.user.domain = token.domain as string || null;
+        session.user.onboardingData = token.onboardingData as any || null;
+        console.log("Session callback - session updated:", session);
+      } else {
+        console.log("Session callback - no token, session:", session);
       }
       return session;
     },
   },
   pages: {
     signIn: "/auth/login",
-    signUp: "/auth/register",
   },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

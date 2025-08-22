@@ -1,32 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { AuthController } from "@/lib/controllers/authController";
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    
-    const response = await fetch(`${process.env.EXPRESS_SERVER_URL || 'http://localhost:5000'}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: data.error || 'Login failed' },
-        { status: response.status }
-      );
-    }
-
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('Login error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+  return AuthController.login(request);
 }

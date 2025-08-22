@@ -44,6 +44,24 @@ export default function LoginPage() {
           title: "Success",
           description: "Logged in successfully!",
         });
+        
+        // Check if user has completed onboarding
+        try {
+          const session = await getSession();
+          if (session?.user?.id) {
+            const response = await fetch(`/api/user/${session.user.id}`);
+            if (response.ok) {
+              const userData = await response.json();
+              if (!userData.onboarding) {
+                router.push("/onboarding");
+                return;
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Failed to check onboarding status:", error);
+        }
+        
         router.push("/dashboard");
       }
     } catch (error) {
@@ -60,7 +78,7 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      await signIn("google", { callbackUrl: "/dashboard" });
+      await signIn("google", { callbackUrl: "/onboarding" });
     } catch (error) {
       toast({
         title: "Error",

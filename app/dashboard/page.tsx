@@ -2,9 +2,9 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { LogOut, User, Mail, Phone } from "lucide-react";
+import { LogOut, User, Mail, Phone, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -19,7 +21,25 @@ export default function DashboardPage() {
     }
   }, [status, router]);
 
-  if (status === "loading") {
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      // Check onboarding status from session
+      if (!session.user.onboarding) {
+        router.push("/onboarding");
+        return;
+      }
+      
+      // Set user profile from session data
+      setUserProfile({
+        onboarding: session.user.onboarding,
+        domain: session.user.domain,
+        onboardingData: session.user.onboardingData
+      });
+      setIsLoading(false);
+    }
+  }, [session, status, router]);
+
+  if (status === "loading" || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -104,9 +124,76 @@ export default function DashboardPage() {
                     Active
                   </Badge>
                 </div>
+                {userProfile?.domain && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Career Domain
+                    </Label>
+                    <Badge variant="default" className="text-sm">
+                      {userProfile.domain}
+                    </Badge>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Onboarding Summary */}
+          {userProfile?.onboardingData && (
+            <Card className="border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      🎯 Career Profile Summary
+                    </CardTitle>
+                    <CardDescription>
+                      Your personalized career preferences and goals
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push("/onboarding")}
+                    className="flex items-center gap-2"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Edit Profile
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {userProfile.domain && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Primary Career Domain
+                    </Label>
+                    <Badge variant="default" className="text-sm">
+                      {userProfile.domain}
+                    </Badge>
+                  </div>
+                )}
+                
+                {userProfile.onboardingData.personalBackground?.education && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Education Level
+                    </Label>
+                    <p className="text-sm">{userProfile.onboardingData.personalBackground.education}</p>
+                  </div>
+                )}
+                
+                {userProfile.onboardingData.goals?.motivation && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">
+                      Career Motivation
+                    </Label>
+                    <p className="text-sm">{userProfile.onboardingData.goals.motivation}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Features Grid */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
