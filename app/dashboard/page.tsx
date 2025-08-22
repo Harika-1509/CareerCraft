@@ -385,7 +385,8 @@ function DashboardContent() {
                 title: "AI Chatbot Mentor",
                 description: "Chat with your AI mentor for personalized advice and guidance",
                 icon: <MessageSquare className="w-6 h-6 text-blue-600" />,
-                status: "Coming Soon",
+                status: "Chat Now",
+                href: "/ai-chatbot",
               },
               {
                 title: "News and Updates",
