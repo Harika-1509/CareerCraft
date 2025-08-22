@@ -102,7 +102,7 @@ export default function RegisterPage() {
       if (result?.error) {
         router.push("/auth/login");
       } else {
-        router.push("/dashboard");
+        router.push("/onboarding");
       }
     } catch (error: any) {
       toast({
@@ -118,7 +118,7 @@ export default function RegisterPage() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
-      await signIn("google", { callbackUrl: "/dashboard" });
+      await signIn("google", { callbackUrl: "/onboarding" });
     } catch (error) {
       toast({
         title: "Error",

@@ -33,6 +33,38 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   phone: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  onboarding: { type: Boolean, default: false },
+  domain: { type: String, default: null },
+  onboardingData: {
+    personalBackground: {
+      education: String,
+      fieldOfStudy: String,
+      workPreference: String
+    },
+    interests: {
+      activities: [String],
+      industries: [String]
+    },
+    skills: {
+      currentSkills: [String],
+      technicalLevel: String
+    },
+    workPreferences: {
+      workWith: String,
+      workLocation: String,
+      workEnvironment: String
+    },
+    goals: {
+      motivation: String,
+      longTermVision: String
+    },
+    constraints: {
+      openToAbroad: String,
+      learningTime: String,
+      higherStudies: String,
+      financialConstraints: String
+    }
+  },
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -148,6 +180,73 @@ app.post('/api/auth/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update onboarding data endpoint
+app.post('/api/user/onboarding', async (req, res) => {
+  try {
+    const { userId, domain, onboardingData, isComplete = false } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Update user with onboarding data
+    if (domain) {
+      user.domain = domain;
+    }
+    
+    if (onboardingData) {
+      user.onboardingData = { ...user.onboardingData, ...onboardingData };
+    }
+    
+    // Only set onboarding to true if it's complete
+    if (isComplete) {
+      user.onboarding = true;
+    }
+    
+    await user.save();
+
+    res.json({
+      success: true,
+      message: isComplete ? 'Onboarding completed successfully' : 'Progress saved successfully',
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        onboarding: user.onboarding,
+        domain: user.domain,
+        onboardingData: user.onboardingData
+      }
+    });
+  } catch (error) {
+    console.error('Onboarding update error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get user profile endpoint
+app.get('/api/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findById(userId).select('-password');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Get user error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
