@@ -4,11 +4,10 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { LogOut, User, Mail, Phone, Edit3, UserCircle, Sun, Moon, Target, Briefcase, MessageSquare, BarChart, TrendingUp, Users } from "lucide-react";
+import { User, Mail, Phone, Edit3, Target, Briefcase, MessageSquare, BarChart, TrendingUp, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Image from "next/image";
 import { useTheme } from "next-themes";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,8 +21,6 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", domain: "" });
@@ -365,7 +362,7 @@ export default function DashboardPage() {
           {/* Onboarding Summary */}
           
           {/* Features Grid */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 pb-10">
             {[
               {
                 title: "AI Career Roadmap",
