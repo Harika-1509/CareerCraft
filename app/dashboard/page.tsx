@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { LogOut, User, Mail, Phone, Edit3, UserCircle, Sun, Moon, Target, Briefcase, MessageSquare, BarChart, TrendingUp, Users } from "lucide-react";
@@ -13,10 +13,13 @@ import { useTheme } from "next-themes";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { theme, setTheme } = useTheme();
@@ -38,6 +41,7 @@ export default function DashboardPage() {
     "Product Management",
     "Sales & Business Development",
   ];
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -66,6 +70,16 @@ export default function DashboardPage() {
       setIsLoading(false);
     }
   }, [session, status, router]);
+
+  // Check for edit parameter and open dialog
+  useEffect(() => {
+    const editParam = searchParams.get('edit');
+    if (editParam === 'true') {
+      setEditOpen(true);
+      // Remove the query parameter from URL
+      router.replace('/dashboard');
+    }
+  }, [searchParams, router]);
 
   if (status === "loading" || isLoading) {
     return (
@@ -106,7 +120,7 @@ export default function DashboardPage() {
               </div>
              
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap relative">
              
               <Button
                 variant="ghost"
@@ -122,16 +136,49 @@ export default function DashboardPage() {
                 )}
                 <span className="sr-only">Toggle theme</span>
               </Button>
-              <Button variant="outline" onClick={() => {
-                setForm({
-                  firstName: session.user?.firstName || "",
-                  lastName: session.user?.lastName || "",
-                  email: session.user?.email || "",
-                  phone: session.user?.phone || "",
-                  domain: userProfile?.domain || "",
-                });
-                setEditOpen(true);
-              }}>Edit Profile</Button>
+              <Button
+                variant="ghost"
+                className="h-10 w-10 rounded-full bg-muted flex items-center justify-center"
+                title="Account"
+                onClick={() => {
+                  setForm({
+                    firstName: session.user?.firstName || "",
+                    lastName: session.user?.lastName || "",
+                    email: session.user?.email || "",
+                    phone: session.user?.phone || "",
+                    domain: userProfile?.domain || "",
+                  });
+                  setProfileMenuOpen((v) => !v);
+                }}
+              >
+                <UserCircle className="h-6 w-6" />
+              </Button>
+              {profileMenuOpen && (
+                <div className="absolute right-0 top-12 z-20 w-72 rounded-md border border-border bg-background p-3 shadow-sm">
+                  <div className="mb-2">
+                    <div className="font-semibold truncate">{session.user?.firstName} {session.user?.lastName}</div>
+                    <div className="text-xs text-muted-foreground truncate">{session.user?.email}</div>
+                  </div>
+                  <div className="h-px bg-border my-2" />
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      setForm({
+                        firstName: session.user?.firstName || "",
+                        lastName: session.user?.lastName || "",
+                        email: session.user?.email || "",
+                        phone: session.user?.phone || "",
+                        domain: userProfile?.domain || "",
+                      });
+                      setEditOpen(true);
+                    }}
+                  >
+                    Edit Profile
+                  </Button>
+                </div>
+              )}
               
               <Button
                 variant="outline"
@@ -155,18 +202,36 @@ export default function DashboardPage() {
                 className="grid gap-3"
                 onSubmit={async (e) => {
                   e.preventDefault();
-                  const res = await fetch("/api/user/profile/update", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ currentEmail: session.user?.email, ...form }),
-                  });
-                  if (!res.ok) {
-                    const err = await res.json().catch(() => ({}));
-                    alert(err?.error || "Failed to update profile");
-                    return;
+                  try {
+                    const res = await fetch("/api/user/profile/update", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ currentEmail: session.user?.email, ...form }),
+                    });
+                    
+                    if (!res.ok) {
+                      const err = await res.json().catch(() => ({}));
+                      toast({
+                        title: "Error",
+                        description: err?.error || "Failed to update profile",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    toast({
+                      title: "Success",
+                      description: "Profile updated successfully!",
+                    });
+                    setEditOpen(false);
+                    window.location.reload();
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description: "An unexpected error occurred. Please try again.",
+                      variant: "destructive",
+                    });
                   }
-                  setEditOpen(false);
-                  window.location.reload();
                 }}
               >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -298,53 +363,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Onboarding Summary */}
-          {userProfile?.onboardingData && (
-            <Card className="border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      🎯 Career Profile Summary
-                    </CardTitle>
-                    <CardDescription>
-                      Your personalized career preferences and goals
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push("/onboarding")}
-                    className="flex items-center gap-2"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                    Edit Profile
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-               
-                
-                {userProfile.onboardingData.personalBackground?.education && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">
-                      Education Level
-                    </Label>
-                    <p className="text-sm">{userProfile.onboardingData.personalBackground.education}</p>
-                  </div>
-                )}
-                
-                {userProfile.onboardingData.goals?.motivation && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">
-                      Career Motivation
-                    </Label>
-                    <p className="text-sm">{userProfile.onboardingData.goals.motivation}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
+          
           {/* Features Grid */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[
