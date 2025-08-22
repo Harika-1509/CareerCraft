@@ -4,16 +4,26 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { LogOut, User, Mail, Phone, Edit3 } from "lucide-react";
+import { LogOut, User, Mail, Phone, Edit3, UserCircle, PanelsTopLeft, Sun, Moon, Target, Briefcase, MessageSquare, BarChart, TrendingUp, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
+import { useTheme } from "next-themes";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -55,8 +65,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4">
-      <div className="container mx-auto max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="container mx-auto px-6 lg:px-10 max-w-7xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -64,22 +74,88 @@ export default function DashboardPage() {
           className="space-y-6"
         >
           {/* Header */}
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold">Welcome to CareerPath</h1>
-              <p className="text-muted-foreground">
-                Your AI-powered career mentor dashboard
-              </p>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 py-4 sm:py-6 lg:py-8">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 font-bold">
+                <Image
+                  key={mounted ? theme : 'loading'}
+                  src={mounted && theme === 'dark' ? "/main-logo-dark.png" : "/main-logo.png"}
+                  alt="CareerPath Logo"
+                  width={150}
+                  height={150}
+                  className="rounded-lg"
+                />
+              </div>
+             
             </div>
-            <Button
-              variant="outline"
-              onClick={() => router.push("/auth/signout")}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+             
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="rounded-full"
+                title="Toggle theme"
+              >
+                {mounted && theme === "dark" ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+                <span className="sr-only">Toggle theme</span>
+              </Button>
+              <Button
+                variant="ghost"
+                className="p-0 h-10 w-10 rounded-full overflow-hidden"
+                onClick={() => router.push("/profile")}
+                title="View Profile"
+              >
+                {session.user?.image ? (
+                  <Image src={session.user.image} alt="User" width={40} height={40} />
+                ) : (
+                  <UserCircle className="h-8 w-8" />
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/auth/signout")}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
           </div>
+
+          {/* Scrape Drawer */}
+          <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+            <SheetContent side="left" className="w-80 sm:w-96">
+              <div className="space-y-6 py-4">
+                <div>
+                  <h3 className="text-xl font-semibold">Scrape Recommendations</h3>
+                  <p className="text-sm text-muted-foreground">Choose what to fetch for your domain</p>
+                </div>
+
+                <div className="grid gap-3">
+                  <Button onClick={async () => { await fetch("/api/recommendations/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: session.user?.email, domain: userProfile?.domain, category: "courses" }) }); }}>
+                    Fetch Courses
+                  </Button>
+                  <Button onClick={async () => { await fetch("/api/recommendations/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: session.user?.email, domain: userProfile?.domain, category: "hackathons" }) }); }}>
+                    Fetch Hackathons
+                  </Button>
+                  <Button onClick={async () => { await fetch("/api/recommendations/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: session.user?.email, domain: userProfile?.domain, category: "competitions" }) }); }}>
+                    Fetch Competitions
+                  </Button>
+                  <Button onClick={async () => { await fetch("/api/recommendations/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: session.user?.email, domain: userProfile?.domain, category: "internships" }) }); }}>
+                    Fetch Internships
+                  </Button>
+                  <Button onClick={async () => { await fetch("/api/recommendations/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: session.user?.email, domain: userProfile?.domain, category: "jobs" }) }); }}>
+                    Fetch Jobs
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
 
           {/* User Info Card */}
           <Card className="border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -163,16 +239,7 @@ export default function DashboardPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {userProfile.domain && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-muted-foreground">
-                      Primary Career Domain
-                    </Label>
-                    <Badge variant="default" className="text-sm">
-                      {userProfile.domain}
-                    </Badge>
-                  </div>
-                )}
+               
                 
                 {userProfile.onboardingData.personalBackground?.education && (
                   <div className="space-y-2">
@@ -201,37 +268,37 @@ export default function DashboardPage() {
               {
                 title: "AI Career Roadmap",
                 description: "Get personalized career guidance based on your skills and interests",
-                icon: "🎯",
+                icon: <Target className="w-6 h-6 text-blue-600" />,
                 status: "Coming Soon",
               },
               {
                 title: "Opportunity Hub",
                 description: "Discover courses, internships, and projects tailored to your path",
-                icon: "💼",
+                icon: <Briefcase className="w-6 h-6 text-blue-600" />,
                 status: "Coming Soon",
               },
               {
                 title: "AI Chatbot Mentor",
                 description: "Chat with your AI mentor for personalized advice and guidance",
-                icon: "🤖",
+                icon: <MessageSquare className="w-6 h-6 text-blue-600" />,
                 status: "Coming Soon",
               },
               {
                 title: "Skill Analytics",
                 description: "Track your progress and identify skill gaps",
-                icon: "📊",
+                icon: <BarChart className="w-6 h-6 text-blue-600" />,
                 status: "Coming Soon",
               },
               {
                 title: "Trend Insights",
                 description: "Stay updated with job market trends and skill demands",
-                icon: "📈",
+                icon: <TrendingUp className="w-6 h-6 text-blue-600" />,
                 status: "Coming Soon",
               },
               {
                 title: "Community",
                 description: "Connect with peers and mentors in your field",
-                icon: "👥",
+                icon: <Users className="w-6 h-6 text-blue-600" />,
                 status: "Coming Soon",
               },
             ].map((feature, index) => (
@@ -243,7 +310,7 @@ export default function DashboardPage() {
               >
                 <Card className="h-full border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                   <CardContent className="p-6">
-                    <div className="text-3xl mb-4">{feature.icon}</div>
+                    <div className="mb-4">{feature.icon}</div>
                     <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
                     <p className="text-muted-foreground mb-4">{feature.description}</p>
                     <Badge variant="outline" className="text-xs">

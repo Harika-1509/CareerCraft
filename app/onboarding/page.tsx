@@ -408,6 +408,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           email: session.user?.email,
           domain: selectedDomain,
+          isComplete: true, // Mark onboarding as completed
         }),
       });
 
@@ -420,11 +421,11 @@ export default function OnboardingPage() {
 
       toast({
         title: "Success",
-        description: "Domain selected successfully! Redirecting to dashboard...",
+        description: "Domain selected successfully! Redirecting to LAKO NOWN dashboard...",
       });
 
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push("/lako-nown/dashboard");
       }, 1500);
     } catch (error) {
       toast({
