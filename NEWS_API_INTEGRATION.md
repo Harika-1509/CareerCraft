@@ -19,7 +19,7 @@ This guide explains how to integrate the News and Trends page with real news API
 ```bash
 # Add to .env.local
 NEXT_PUBLIC_NEWS_API_URL=https://newsapi.org/v2/everything
-NEXT_PUBLIC_NEWS_API_KEY=your_api_key_here
+NEWS_API_KEY=your_api_key_here
 ```
 
 **Features:**
@@ -32,7 +32,7 @@ NEXT_PUBLIC_NEWS_API_KEY=your_api_key_here
 ```bash
 # Add to .env.local
 NEXT_PUBLIC_NEWS_API_URL=https://gnews.io/api/v4/search
-NEXT_PUBLIC_NEWS_API_KEY=your_api_key_here
+NEWS_API_KEY=your_api_key_here
 ```
 
 **Features:**
@@ -45,7 +45,7 @@ NEXT_PUBLIC_NEWS_API_KEY=your_api_key_here
 ```bash
 # Add to .env.local
 NEXT_PUBLIC_NEWS_API_URL=https://api.bing.microsoft.com/v7.0/news/search
-NEXT_PUBLIC_NEWS_API_KEY=your_bing_api_key_here
+NEWS_API_KEY=your_bing_api_key_here
 ```
 
 **Features:**
@@ -92,7 +92,7 @@ Create your own news aggregation service that:
 ```bash
 # .env.local
 NEXT_PUBLIC_NEWS_API_URL=https://newsapi.org/v2/everything
-NEXT_PUBLIC_NEWS_API_KEY=your_actual_api_key_here
+NEWS_API_KEY=your_actual_api_key_here
 ```
 
 ### Step 3: Test the Integration

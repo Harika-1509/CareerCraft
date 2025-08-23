@@ -18,7 +18,7 @@
 ### **Step 1: Verify Environment**
 Make sure you have `.env.local` with:
 ```bash
-NEXT_PUBLIC_NEWS_API_KEY=7ef7456d67bf44a9bab8b36867fd7d76
+NEWS_API_KEY=7ef7456d67bf44a9bab8b36867fd7d76
 ```
 
 ### **Step 2: Restart Server**
