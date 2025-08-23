@@ -1,211 +1,140 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
-
-// Mock news data - replace with your actual news source
-const mockNewsData = {
-  "AI & Machine Learning": [
-    {
-      id: "ai-1",
-      title: "Latest Breakthroughs in AI & Machine Learning",
-      description: "Discover the newest developments in artificial intelligence and machine learning that are reshaping industries worldwide.",
-      category: "Industry Trends",
-      date: "2024-01-15T10:00:00Z",
-      readTime: "5 min read",
-      source: "AI Insights Weekly",
-      url: "https://example.com/ai-breakthroughs",
-      image: "/placeholder.jpg",
-      content: "The field of artificial intelligence continues to evolve at an unprecedented pace...",
-      author: "Dr. Sarah Chen",
-      tags: ["AI", "Machine Learning", "Innovation"]
-    },
-    {
-      id: "ai-2",
-      title: "AI Job Market: Skills in High Demand",
-      description: "Analysis of the most sought-after AI skills and career opportunities in 2024.",
-      category: "Career Insights",
-      date: "2024-01-14T14:30:00Z",
-      readTime: "4 min read",
-      source: "Tech Careers",
-      url: "https://example.com/ai-jobs",
-      image: "/placeholder.jpg",
-      content: "As AI becomes more integrated into business operations...",
-      author: "Mark Johnson",
-      tags: ["AI", "Career", "Job Market"]
-    }
-  ],
-  "Web Development": [
-    {
-      id: "web-1",
-      title: "Modern Web Development Trends 2024",
-      description: "Explore the latest frameworks, tools, and practices shaping the future of web development.",
-      category: "Technology",
-      date: "2024-01-15T09:15:00Z",
-      readTime: "6 min read",
-      source: "Web Dev Today",
-      url: "https://example.com/web-trends",
-      image: "/placeholder.jpg",
-      content: "The web development landscape is constantly evolving...",
-      author: "Alex Rodriguez",
-      tags: ["Web Development", "Frontend", "Trends"]
-    },
-    {
-      id: "web-2",
-      title: "Full-Stack Development: A Complete Guide",
-      description: "Comprehensive overview of full-stack development skills and learning paths.",
-      category: "Education",
-      date: "2024-01-13T16:45:00Z",
-      readTime: "8 min read",
-      source: "Code Academy",
-      url: "https://example.com/fullstack-guide",
-      image: "/placeholder.jpg",
-      content: "Full-stack development requires a diverse skill set...",
-      author: "Emily Chen",
-      tags: ["Web Development", "Full-Stack", "Learning"]
-    }
-  ],
-  "Data Science": [
-    {
-      id: "ds-1",
-      title: "Data Science in the Age of Big Data",
-      description: "How data scientists are leveraging big data to drive business decisions and innovation.",
-      category: "Industry Trends",
-      date: "2024-01-15T11:20:00Z",
-      readTime: "7 min read",
-      source: "Data Insights",
-      url: "https://example.com/big-data-science",
-      image: "/placeholder.jpg",
-      content: "The explosion of data in recent years has created unprecedented opportunities...",
-      author: "Dr. Michael Brown",
-      tags: ["Data Science", "Big Data", "Analytics"]
-    }
-  ]
-};
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const domain = searchParams.get('domain');
-    const category = searchParams.get('category');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
     const search = searchParams.get('search');
+    const category = searchParams.get('category');
+    const pageParam = searchParams.get('page') || '1';
+    const limit = searchParams.get('limit') || '10';
+    
+    // Parse page number, but don't limit it here - let the frontend handle pagination limits
+    const page = parseInt(pageParam).toString();
 
-    let newsData: any[] = [];
-
-    // If domain is specified, get domain-specific news
-    if (domain && mockNewsData[domain as keyof typeof mockNewsData]) {
-      newsData = mockNewsData[domain as keyof typeof mockNewsData];
-    } else {
-      // Get all news from all domains
-      Object.values(mockNewsData).forEach(domainNews => {
-        newsData.push(...domainNews);
-      });
+    if (!domain && !search) {
+      return NextResponse.json({ error: 'Domain or search query is required' }, { status: 400 });
     }
 
-    // Apply category filter
-    if (category) {
-      newsData = newsData.filter(news => 
-        news.category.toLowerCase() === category.toLowerCase()
-      );
+    const apiKey = process.env.NEXT_PUBLIC_NEWS_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'News API key not configured' }, { status: 500 });
     }
 
-    // Apply search filter
+    const queryParams = new URLSearchParams();
+    
+    // Build search query
+    let searchQuery = '';
     if (search) {
-      const searchLower = search.toLowerCase();
-      newsData = newsData.filter(news =>
-        news.title.toLowerCase().includes(searchLower) ||
-        news.description.toLowerCase().includes(searchLower) ||
-        news.tags.some((tag: string) => tag.toLowerCase().includes(searchLower))
-      );
+      searchQuery = search;
+    } else if (domain) {
+      searchQuery = domain;
+    }
+    
+    if (searchQuery) {
+      queryParams.append('q', searchQuery);
+    }
+    
+    // Set date from 10 days ago
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+    const fromDate = tenDaysAgo.toISOString().split('T')[0];
+    queryParams.append('from', fromDate);
+    
+    // Add other parameters
+    queryParams.append('sortBy', 'publishedAt');
+    queryParams.append('pageSize', limit);
+    queryParams.append('page', page); // Add page parameter for pagination
+    queryParams.append('language', 'en');
+    queryParams.append('apiKey', apiKey);
+
+    const newsApiUrl = `https://newsapi.org/v2/everything?${queryParams.toString()}`;
+    
+    const response = await fetch(newsApiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`NewsAPI request failed: ${response.status}`);
     }
 
-    // Apply pagination
-    const total = newsData.length;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedData = newsData.slice(startIndex, endIndex);
-
-    // Sort by date (newest first)
-    paginatedData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const data = await response.json();
+    
+    // Transform the data to match our expected format
+    const articles = data.articles || [];
+    const transformedData = articles.map((article: any, index: number) => ({
+      id: article.url || `news-${index + 1}`,
+      title: article.title || `Latest News in ${domain || 'Technology'}`,
+      description: article.description || `Stay updated with ${domain || 'Technology'} news`,
+      category: categorizeArticle(article.title || '', article.description || '', domain || ''),
+      date: article.publishedAt || new Date().toISOString(),
+      readTime: calculateReadTime(article.content || article.description || ''),
+      source: article.source?.name || 'News Source',
+      url: article.url || '#',
+      image: article.urlToImage || '/placeholder.jpg',
+      content: article.content,
+      author: article.author,
+      tags: extractTags(article.title || '', article.description || '', domain || ''),
+    }));
 
     return NextResponse.json({
       success: true,
-      data: paginatedData,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
+      data: transformedData,
+      total: data.totalResults || transformedData.length,
+      page: parseInt(page),
+      limit: parseInt(limit),
     });
 
-  } catch (error) {
-    console.error('Error in news API:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error('Error fetching news:', error);
+    return NextResponse.json({ 
+      error: 'Failed to fetch news data',
+      details: error.message 
+    }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { action, domain, category, search } = body;
-
-    let newsData: any[] = [];
-
-    switch (action) {
-      case 'search':
-        // Implement search functionality
-        if (search) {
-          Object.values(mockNewsData).forEach(domainNews => {
-            newsData.push(...domainNews);
-          });
-          
-          const searchLower = search.toLowerCase();
-          newsData = newsData.filter(news =>
-            news.title.toLowerCase().includes(searchLower) ||
-            news.description.toLowerCase().includes(searchLower)
-          );
-        }
-        break;
-
-      case 'trending':
-        // Get trending news (most recent)
-        Object.values(mockNewsData).forEach(domainNews => {
-          newsData.push(...domainNews);
-        });
-        newsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        newsData = newsData.slice(0, 10); // Top 10 trending
-        break;
-
-      default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: newsData,
-      total: newsData.length
-    });
-
-  } catch (error) {
-    console.error('Error in news API POST:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+// Helper functions
+function categorizeArticle(title: string, description: string, domain: string): string {
+  const text = `${title} ${description}`.toLowerCase();
+  
+  if (text.includes('job') || text.includes('career') || text.includes('employment')) {
+    return 'Career Insights';
+  } else if (text.includes('trend') || text.includes('market') || text.includes('industry')) {
+    return 'Industry Trends';
+  } else if (text.includes('learn') || text.includes('course') || text.includes('education')) {
+    return 'Education';
+  } else if (text.includes('event') || text.includes('conference') || text.includes('meetup')) {
+    return 'Community';
+  } else if (text.includes('success') || text.includes('story') || text.includes('journey')) {
+    return 'Inspiration';
+  } else if (text.includes('technology') || text.includes('tech') || text.includes('innovation')) {
+    return 'Technology';
+  } else {
+    return 'General';
   }
+}
+
+function extractTags(title: string, description: string, domain: string): string[] {
+  const text = `${title} ${description}`.toLowerCase();
+  const tags = [domain];
+  
+  const techKeywords = ['ai', 'machine learning', 'web development', 'data science', 'cybersecurity', 'cloud', 'devops'];
+  techKeywords.forEach(keyword => {
+    if (text.includes(keyword)) {
+      tags.push(keyword);
+    }
+  });
+  
+  return tags;
+}
+
+function calculateReadTime(content: string): string {
+  const wordsPerMinute = 200;
+  const wordCount = content.split(' ').length;
+  const readTime = Math.ceil(wordCount / wordsPerMinute);
+  return `${readTime} min read`;
 }
